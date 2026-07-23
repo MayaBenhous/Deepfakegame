@@ -1,0 +1,1001 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f8f4ec">
+  <title>זהו את המתחזים!</title>
+  <style>
+    @font-face {
+      font-family: "Rubik Local";
+      src: url("assets/fonts/Rubik-Variable.ttf") format("truetype");
+      font-style: normal;
+      font-weight: 300 900;
+      font-display: swap;
+    }
+
+    :root {
+      --paper: #f8f4ec;
+      --ink: #292624;
+      --acid: #a8c49a;
+      --coral: #f4a69a;
+      --blue: #bbd7f0;
+      --green: #a8c49a;
+      --muted: #6e665f;
+      --line: 1.5px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 10%, rgba(187, 215, 240, .34), transparent 24rem),
+        radial-gradient(circle at 91% 88%, rgba(168, 196, 154, .28), transparent 26rem),
+        var(--paper);
+      font-family: "Rubik Local", Arial, sans-serif;
+      overflow: hidden;
+    }
+
+    button { font: inherit; }
+
+    .app {
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      min-height: 0;
+      margin: 0 auto;
+      padding: clamp(10px, 1.8vmin, 28px);
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr);
+      gap: clamp(8px, 1.5vmin, 20px);
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 130px 1fr 130px;
+      gap: clamp(12px, 2vw, 28px);
+      align-items: center;
+      direction: ltr;
+    }
+
+    h1 {
+      max-width: none;
+      margin: 0;
+      font-family: "Rubik Local", Arial, sans-serif;
+      font-size: clamp(36px, 5vw, 68px);
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -.025em;
+      text-align: center;
+      direction: rtl;
+    }
+
+    .timer-panel,
+    .selection-counter {
+      min-height: 68px;
+      display: grid;
+      place-items: center;
+      border: var(--line) solid var(--ink);
+      border-radius: 18px;
+      background: var(--paper);
+      font-weight: 900;
+    }
+
+    .timer-panel { grid-template-columns: auto auto; gap: 7px; padding: 8px 12px; direction: rtl; }
+    .timer-value { font-size: clamp(28px, 3vw, 42px); line-height: 1; font-variant-numeric: tabular-nums; }
+    .timer-label { min-width: 0; font-size: clamp(15px, 1.25vw, 20px); line-height: 1; direction: rtl; white-space: nowrap; }
+    .timer-panel.urgent { background: var(--coral); animation: timerPulse .6s ease-in-out infinite alternate; }
+    .selection-counter { font-size: clamp(28px, 3vw, 42px); background: var(--paper); direction: ltr; }
+
+    @keyframes timerPulse { to { transform: scale(1.04); } }
+
+    .game-area {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      overflow: hidden;
+      padding: 2px 8px 8px 2px;
+    }
+
+    .face-grid {
+      width: 100%;
+      height: 100%;
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-rows: repeat(3, minmax(0, 1fr));
+      gap: clamp(6px, 1.1vmin, 16px);
+    }
+
+    .face-card {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-width: 0;
+      min-height: 0;
+      padding: 0;
+      overflow: hidden;
+      border: var(--line) solid var(--ink);
+      border-radius: clamp(10px, 1.4vw, 18px);
+      background: var(--paper);
+      cursor: pointer;
+      isolation: isolate;
+      transition: transform .15s ease, box-shadow .15s ease, filter .2s ease;
+    }
+
+    .face-card:hover { transform: translateY(-2px); }
+    .face-card:active { transform: translateY(1px); }
+
+    .face-card:focus-visible {
+      outline: 3px solid var(--blue);
+      outline-offset: 3px;
+    }
+
+    .photo-frame {
+      width: 100%;
+      height: 100%;
+      background: var(--paper);
+    }
+
+    .face-card img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: center;
+      background: var(--paper);
+      filter: saturate(.92) contrast(1.02);
+      transition: transform .3s ease, filter .3s ease;
+    }
+
+    .face-card:hover img { transform: scale(1.025); }
+
+    .card-number {
+      position: absolute;
+      z-index: 3;
+      top: 9px;
+      left: 9px;
+      display: grid;
+      place-items: center;
+      width: clamp(30px, 3.2vw, 44px);
+      aspect-ratio: 1;
+      border: var(--line) solid var(--ink);
+      border-radius: 50%;
+      background: var(--paper);
+      font-size: clamp(15px, 1.5vw, 20px);
+      font-weight: 900;
+    }
+
+    .selection-badge {
+      position: absolute;
+      z-index: 4;
+      top: 9px;
+      right: 9px;
+      display: grid;
+      place-items: center;
+      min-height: clamp(34px, 3.7vw, 48px);
+      padding: 5px clamp(10px, 1.2vw, 16px);
+      border: var(--line) solid var(--ink);
+      border-radius: 999px;
+      background: var(--blue);
+      font-size: clamp(12px, 1.15vw, 17px);
+      font-weight: 900;
+      opacity: 0;
+      transform: translateY(-8px) scale(.85);
+      transition: opacity .15s ease, transform .2s cubic-bezier(.2,.8,.2,1.4);
+    }
+
+    .face-card[aria-pressed="true"] {
+      border: 5px solid var(--blue);
+      transform: none;
+    }
+
+    .face-card[aria-pressed="true"]::after {
+      content: none;
+    }
+
+    .face-card[aria-pressed="true"] .selection-badge { opacity: 1; transform: translateY(0) scale(1); }
+
+    .reveal-label {
+      position: absolute;
+      z-index: 5;
+      bottom: clamp(6px, .8vw, 12px);
+      right: clamp(6px, .8vw, 12px);
+      min-width: 110px;
+      padding: 7px 14px;
+      border: var(--line) solid var(--ink);
+      border-radius: 999px;
+      background: var(--paper);
+      font-size: clamp(14px, 1.25vw, 20px);
+      font-weight: 900;
+      letter-spacing: .02em;
+      opacity: 0;
+      transform: translateX(10px);
+      transition: .2s ease;
+    }
+
+    .face-card.revealed .reveal-label { opacity: 1; transform: translateX(0); }
+    .face-card.revealed.real { border: 5px solid var(--green); box-shadow: none; }
+    .face-card.revealed.fake { border: 5px solid var(--coral); box-shadow: none; }
+    .face-card.revealed.real .reveal-label { background: var(--paper); color: #08734d; border-color: #08734d; }
+    .face-card.revealed.fake .reveal-label { background: var(--paper); color: #c52b1b; border-color: #c52b1b; }
+
+    .demo-portrait {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(145deg, var(--demo-a), var(--demo-b));
+    }
+
+    .demo-portrait::before {
+      content: "";
+      position: absolute;
+      width: 42%;
+      height: 70%;
+      left: 29%;
+      top: 15%;
+      border: var(--line) solid var(--ink);
+      border-radius: 48% 48% 42% 42%;
+      background:
+        radial-gradient(circle at 31% 42%, var(--ink) 0 3px, transparent 4px),
+        radial-gradient(circle at 69% 42%, var(--ink) 0 3px, transparent 4px),
+        linear-gradient(90deg, transparent 47%, rgba(17,17,15,.18) 48% 52%, transparent 53%),
+        var(--skin);
+      box-shadow: 0 13px 0 -3px var(--hair);
+    }
+
+    .demo-portrait::after {
+      content: "הדגמה";
+      position: absolute;
+      right: 8px;
+      bottom: 7px;
+      padding: 3px 6px;
+      background: rgba(242,239,230,.86);
+      border: 1px solid var(--ink);
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: .1em;
+    }
+
+    .overlay-layer {
+      position: fixed;
+      z-index: 20;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(17,17,15,.48);
+      backdrop-filter: blur(5px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s ease;
+    }
+
+    .overlay-layer.open { opacity: 1; pointer-events: auto; }
+
+    .result-layer { display: none; min-width: 0; }
+    .result-layer.open { display: block; }
+
+    .result-card {
+      width: 100%;
+      padding: clamp(10px, 1.3vw, 18px);
+      display: grid;
+      grid-template-columns: minmax(150px, .55fr) minmax(0, 2fr) minmax(180px, .65fr);
+      grid-template-areas: "heading copy actions";
+      gap: clamp(12px, 1.7vw, 26px);
+      align-items: center;
+      border: var(--line) solid var(--ink);
+      border-radius: 20px;
+      background: var(--paper);
+      text-align: center;
+    }
+
+    .overlay-layer.open .intro-card { transform: scale(1); }
+    .result-card.win { background: var(--acid); }
+    .result-card.lose { background: var(--coral); }
+
+    .result-heading { grid-area: heading; }
+    .result-kicker { margin: 0 0 4px; font-size: clamp(14px, 1.15vw, 18px); font-weight: 900; letter-spacing: .04em; }
+
+    .result-title {
+      margin: 0;
+      font-family: "Rubik Local", Arial, sans-serif;
+      font-size: clamp(34px, 4vw, 54px);
+      line-height: .95;
+    }
+
+    .result-copy {
+      grid-area: copy;
+      display: grid;
+      gap: clamp(7px, .9vw, 12px);
+      min-width: 0;
+      margin: 0;
+    }
+
+    .result-summary,
+    .result-system {
+      margin: 0;
+      font-size: clamp(16px, 1.4vw, 22px);
+      font-weight: 800;
+      line-height: 1.25;
+    }
+
+    .result-system {
+      width: fit-content;
+      max-width: 100%;
+      justify-self: center;
+      padding: clamp(6px, .8vw, 10px) clamp(8px, 1vw, 12px);
+      border: var(--line) solid var(--ink);
+      border-radius: 12px;
+      background: rgba(248, 244, 236, .78);
+      font-weight: 900;
+    }
+
+    .result-actions { grid-area: actions; }
+
+    .again-button {
+      min-width: 180px;
+      min-height: 52px;
+      padding: 10px 18px;
+      border: var(--line) solid var(--ink);
+      border-radius: 999px;
+      background: var(--ink);
+      color: white;
+      font-size: clamp(15px, 1.25vw, 19px);
+      font-weight: 900;
+      letter-spacing: .02em;
+      cursor: pointer;
+      transition: transform .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease;
+    }
+
+    .again-button:hover,
+    .intro-hint:hover { background: var(--coral); color: var(--ink); }
+
+    .again-button:active,
+    .intro-hint:active { transform: translateY(1px); }
+
+    .again-button:focus-visible,
+    .intro-hint:focus-visible {
+      outline: 3px solid var(--blue);
+      outline-offset: 4px;
+    }
+
+    .countdown { margin: 9px 0 0; color: var(--muted); font-size: clamp(12px, 1vw, 15px); font-weight: 800; }
+
+    .intro-layer { z-index: 25; background: rgba(17,17,15,.68); }
+
+    .intro-card {
+      width: min(680px, 100%);
+      max-height: calc(100dvh - 32px);
+      padding: clamp(34px, 6vw, 68px);
+      border: 2px solid var(--ink);
+      border-radius: 30px;
+      background: var(--acid);
+      text-align: center;
+      transform: scale(.9);
+      transition: transform .35s cubic-bezier(.2,.9,.2,1.2);
+    }
+
+    .intro-title { margin: 0; font-size: clamp(50px, 9vw, 92px); line-height: .94; font-weight: 900; }
+    .intro-copy { max-width: 520px; margin: 24px auto; font-size: clamp(15px, 1.6vw, 19px); line-height: 1.55; font-weight: 800; }
+    .goal-highlight {
+      padding: .08em .35em;
+      border-radius: .35em;
+      background: var(--coral);
+      color: inherit;
+      box-decoration-break: clone;
+      -webkit-box-decoration-break: clone;
+    }
+    .intro-hint {
+      display: inline-block;
+      min-height: 54px;
+      padding: 14px 22px;
+      border: var(--line) solid var(--ink);
+      border-radius: 999px;
+      background: var(--ink);
+      color: white;
+      font-size: clamp(15px, 1.6vw, 19px);
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease;
+    }
+
+    .toast {
+      position: fixed;
+      z-index: 30;
+      left: 50%;
+      bottom: 24px;
+      max-width: calc(100% - 32px);
+      padding: 11px 18px;
+      border: var(--line) solid var(--ink);
+      border-radius: 999px;
+      background: var(--ink);
+      color: white;
+      font-size: 13px;
+      font-weight: 800;
+      text-align: center;
+      opacity: 0;
+      transform: translate(-50%, 16px);
+      pointer-events: none;
+      transition: .2s ease;
+    }
+
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .shake { animation: shake .25s linear 2; }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      75% { transform: translateX(6px); }
+    }
+
+    @media (max-width: 760px) {
+      .app { padding: 8px; gap: 8px; }
+      .topbar { grid-template-columns: 72px 1fr 72px; gap: 8px; }
+      h1 { font-size: clamp(28px, 8vw, 46px); }
+      .timer-panel, .selection-counter { min-height: 54px; border-radius: 12px; }
+      .timer-panel { padding: 6px; grid-template-columns: 1fr; gap: 0; }
+      .timer-label { font-size: clamp(11px, 2.8vw, 14px); }
+      .face-grid { gap: 8px; }
+      .face-card:hover { transform: none; }
+      .card-number { top: 6px; left: 6px; }
+      .selection-badge { top: 6px; right: 6px; min-height: 30px; padding: 4px 8px; font-size: 10px; }
+      .face-card[aria-pressed="true"],
+      .face-card.revealed.real,
+      .face-card.revealed.fake { border-width: 4px; }
+      .reveal-label { right: 4px; bottom: 4px; min-width: 68px; padding: 4px 7px; border-width: var(--line); font-size: 10px; }
+      .result-card {
+        grid-template-columns: auto minmax(0, 1fr);
+        grid-template-areas: "heading copy" "actions actions";
+        gap: 8px 12px;
+        padding: 10px;
+      }
+      .result-title { font-size: clamp(28px, 7vw, 38px); }
+      .result-summary, .result-system { font-size: clamp(13px, 3vw, 16px); }
+      .result-system { padding: 5px 8px; }
+      .again-button { min-width: 170px; min-height: 44px; padding: 7px 16px; }
+      .countdown { margin-top: 6px; font-size: 11px; }
+    }
+
+    @media (max-height: 800px) and (min-width: 761px) {
+      .app { padding-top: 10px; padding-bottom: 10px; gap: 8px; }
+      h1 { font-size: clamp(34px, 4.4vw, 58px); }
+      .timer-panel, .selection-counter { min-height: 56px; }
+    }
+
+    @media (max-height: 620px) {
+      .app { padding: 6px; gap: 6px; }
+      .topbar { grid-template-columns: 76px 1fr 76px; gap: 8px; }
+      h1 { font-size: clamp(26px, 6vmin, 38px); }
+      .timer-panel, .selection-counter { min-height: 44px; border-radius: 10px; }
+      .timer-panel { grid-template-columns: 1fr; gap: 0; padding: 4px; }
+      .timer-value, .selection-counter { font-size: 25px; }
+      .timer-label { font-size: 11px; }
+      .game-area { padding: 1px 5px 5px 1px; }
+      .face-card { border-width: var(--line); border-radius: 8px; }
+      .card-number { width: 28px; font-size: 14px; }
+      .selection-badge { min-height: 28px; padding: 3px 7px; font-size: 9px; }
+      .reveal-label { min-width: 64px; padding: 3px 6px; font-size: 9px; }
+      .result-card { padding: 7px 10px; gap: 8px 12px; border-radius: 12px; }
+      .result-kicker { margin-bottom: 2px; font-size: 11px; }
+      .result-title { font-size: clamp(26px, 6vh, 36px); }
+      .result-copy { gap: 5px; }
+      .result-summary, .result-system { font-size: clamp(12px, 2.7vh, 16px); line-height: 1.15; }
+      .result-system { padding: 4px 8px; }
+      .again-button { min-height: 40px; padding: 5px 14px; font-size: 13px; }
+      .countdown { margin-top: 4px; font-size: 10px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="timer-panel" id="timerPanel" role="timer" aria-label="30 שניות נותרו">
+        <span class="timer-value" id="timerValue">30</span>
+        <span class="timer-label" id="timerLabel">שניות</span>
+      </div>
+      <h1>תמצאו את הפרצופים האמיתיים?</h1>
+      <div class="selection-counter" id="selectionCounter" aria-label="נבחרו 0 מתוך 3" aria-live="polite">0/3</div>
+    </header>
+
+    <section class="result-layer" id="resultLayer" role="status" aria-live="polite" aria-labelledby="resultTitle" aria-hidden="true">
+      <div class="result-card" id="resultCard">
+        <div class="result-heading">
+          <p class="result-kicker" id="resultKicker">הסיבוב הסתיים</p>
+          <h2 class="result-title" id="resultTitle">כל הכבוד!</h2>
+        </div>
+        <div class="result-copy">
+          <p class="result-summary" id="resultSummary"></p>
+          <p class="result-system" id="resultSystem"></p>
+        </div>
+        <div class="result-actions">
+          <button class="again-button" id="againButton" type="button">נסו שוב</button>
+          <p class="countdown" id="countdown"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="game-area" aria-label="תשעה פרצופים לבחירה">
+      <div class="face-grid" id="faceGrid"></div>
+    </section>
+  </main>
+
+  <section class="overlay-layer intro-layer open" id="introLayer" role="dialog" aria-modal="true" aria-labelledby="introTitle" aria-hidden="false">
+    <div class="intro-card">
+      <h2 class="intro-title" id="introTitle">זהו את המתחזים!</h2>
+      <p class="intro-copy">יש לכם 30 שניות לזהות את <mark class="goal-highlight">שלושת הפרצופים האמיתיים</mark><br>מתוך תשע התמונות לפני שהזמן נגמר.</p>
+      <button class="intro-hint" id="introStartButton" type="button">לחצו כדי להתחיל</button>
+    </div>
+  </section>
+
+  <span id="modeBadge" hidden></span>
+  <button id="controllerButton" type="button" hidden>Controller</button>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="faces/faces.js"></script>
+  <script>
+    (() => {
+      "use strict";
+
+      const REQUIRED_REAL = 3;
+      const REQUIRED_FAKE = 6;
+      const ROUND_SECONDS = 30;
+      const RESULT_SECONDS = 30;
+
+      const grid = document.getElementById("faceGrid");
+      const againButton = document.getElementById("againButton");
+      const selectionCounter = document.getElementById("selectionCounter");
+      const timerPanel = document.getElementById("timerPanel");
+      const timerValue = document.getElementById("timerValue");
+      const timerLabel = document.getElementById("timerLabel");
+      const modeBadge = document.getElementById("modeBadge");
+      const controllerButton = document.getElementById("controllerButton");
+      const resultLayer = document.getElementById("resultLayer");
+      const introLayer = document.getElementById("introLayer");
+      const introStartButton = document.getElementById("introStartButton");
+      const resultCard = document.getElementById("resultCard");
+      const resultKicker = document.getElementById("resultKicker");
+      const resultTitle = document.getElementById("resultTitle");
+      const resultSummary = document.getElementById("resultSummary");
+      const resultSystem = document.getElementById("resultSystem");
+      const countdown = document.getElementById("countdown");
+      const toast = document.getElementById("toast");
+
+      let round = [];
+      let selected = new Set();
+      let revealed = false;
+      let resultTimer = null;
+      let resultOpenTimer = null;
+      let countdownTimer = null;
+      let roundTimer = null;
+      let secondsRemaining = ROUND_SECONDS;
+      let toastTimer = null;
+      let audioContext = null;
+
+      const manifest = window.FACE_LIBRARY || { real: [], fake: [], fakeGroups: {} };
+      const groupedAttacks = Object.entries(manifest.fakeGroups || {})
+        .filter(([, faces]) => Array.isArray(faces) && faces.length >= 2)
+        .slice(0, 3);
+      const flatFakeFaces = Array.isArray(manifest.fake) ? manifest.fake : [];
+      const hasGroupedLibrary = manifest.real.length >= REQUIRED_REAL && groupedAttacks.length === 3;
+      const hasFlatLibrary = manifest.real.length >= REQUIRED_REAL && flatFakeFaces.length >= REQUIRED_FAKE;
+      const hasRealLibrary = hasGroupedLibrary || hasFlatLibrary;
+
+      const demoColors = [
+        ["#bbd7f0", "#a8c49a", "#f0b694", "#2c2018"],
+        ["#ff8f7d", "#f6d365", "#8c4c32", "#171717"],
+        ["#9ad8c8", "#bbd7f0", "#d9a37f", "#6d3a24"],
+        ["#c4a7ff", "#f4a69a", "#efc4a3", "#322317"],
+        ["#f3d86b", "#bbd7f0", "#704128", "#171717"],
+        ["#89c4ff", "#ff9c82", "#d4a078", "#6b402d"],
+        ["#c7ef79", "#80a2d6", "#f2c5a4", "#d5a85e"],
+        ["#ff9bcb", "#a8c49a", "#985e3b", "#261914"],
+        ["#a9a4ff", "#f6b45c", "#c68d67", "#3b261c"],
+        ["#69d6c6", "#ff7e67", "#e9b18b", "#191919"],
+        ["#f0a3ff", "#bbd7f0", "#7b4b32", "#4e2f20"],
+        ["#a6d86c", "#f4ce68", "#ddb190", "#7e573d"]
+      ];
+
+      function shuffled(items) {
+        const copy = [...items];
+        for (let i = copy.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [copy[i], copy[j]] = [copy[j], copy[i]];
+        }
+        return copy;
+      }
+
+      function makeLibrary() {
+        if (hasRealLibrary) {
+          const groupedFakeCount = groupedAttacks.reduce((total, [, faces]) => total + faces.length, 0);
+          const fakeCount = hasGroupedLibrary ? groupedFakeCount : flatFakeFaces.length;
+          modeBadge.textContent = hasGroupedLibrary
+            ? `${manifest.real.length + fakeCount} faces · 3 attacks`
+            : `${manifest.real.length + fakeCount} faces loaded`;
+          modeBadge.dataset.live = "true";
+          return {
+            real: manifest.real.map((src, i) => ({ id: `real-${i}`, src, kind: "real" })),
+            fake: flatFakeFaces.map((src, i) => ({ id: `fake-${i}`, src, kind: "fake" })),
+            fakeGroups: hasGroupedLibrary
+              ? groupedAttacks.map(([attack, faces]) => ({
+                  attack,
+                  faces: faces.map((src, i) => ({ id: `${attack}-${i}`, src, kind: "fake", attack }))
+                }))
+              : []
+          };
+        }
+
+        return {
+          real: Array.from({ length: 6 }, (_, i) => ({ id: `demo-r-${i}`, demo: i, kind: "real" })),
+          fake: Array.from({ length: 12 }, (_, i) => ({ id: `demo-f-${i}`, demo: i + 6, kind: "fake" })),
+          fakeGroups: []
+        };
+      }
+
+      const library = makeLibrary();
+
+      function tone(frequency = 420, duration = .055) {
+        try {
+          audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+          const oscillator = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          oscillator.type = "sine";
+          oscillator.frequency.value = frequency;
+          gain.gain.setValueAtTime(.045, audioContext.currentTime);
+          gain.gain.exponentialRampToValueAtTime(.001, audioContext.currentTime + duration);
+          oscillator.connect(gain).connect(audioContext.destination);
+          oscillator.start();
+          oscillator.stop(audioContext.currentTime + duration);
+        } catch (_) { /* Sound is optional. */ }
+      }
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove("show"), 2200);
+      }
+
+      function createPortrait(face, index) {
+        if (face.src) {
+          const frame = document.createElement("div");
+          frame.className = "photo-frame";
+          const image = document.createElement("img");
+          image.src = face.src;
+          image.alt = `פרצוף מספר ${index + 1}`;
+          image.draggable = false;
+          image.addEventListener("error", () => {
+            frame.replaceWith(createDemoPortrait(index));
+            showToast("לא ניתן לטעון את אחת התמונות.");
+          }, { once: true });
+          frame.append(image);
+          return frame;
+        }
+        return createDemoPortrait(face.demo);
+      }
+
+      function createDemoPortrait(seed) {
+        const colors = demoColors[seed % demoColors.length];
+        const portrait = document.createElement("div");
+        portrait.className = "demo-portrait";
+        portrait.setAttribute("role", "img");
+        portrait.setAttribute("aria-label", "תמונת הדגמה");
+        portrait.style.setProperty("--demo-a", colors[0]);
+        portrait.style.setProperty("--demo-b", colors[1]);
+        portrait.style.setProperty("--skin", colors[2]);
+        portrait.style.setProperty("--hair", colors[3]);
+        return portrait;
+      }
+
+      function renderRound() {
+        grid.textContent = "";
+        round.forEach((face, index) => {
+          const card = document.createElement("button");
+          card.type = "button";
+          card.className = "face-card";
+          card.dataset.index = index;
+          card.setAttribute("aria-pressed", "false");
+          card.setAttribute("aria-label", `פרצוף ${index + 1}, לא נבחר`);
+
+          const number = document.createElement("span");
+          number.className = "card-number";
+          number.textContent = index + 1;
+
+          const selectionBadge = document.createElement("span");
+          selectionBadge.className = "selection-badge";
+          selectionBadge.setAttribute("aria-hidden", "true");
+          selectionBadge.textContent = "נבחר";
+
+          const label = document.createElement("span");
+          label.className = "reveal-label";
+          label.textContent = face.kind === "real" ? "✓ אמיתי" : "✕ מזויף";
+
+          card.append(createPortrait(face, index), number, selectionBadge, label);
+          card.addEventListener("click", () => toggleFace(index));
+          grid.append(card);
+        });
+      }
+
+      function updateSelectionUI() {
+        const count = selected.size;
+        selectionCounter.textContent = `${count}/3`;
+        selectionCounter.setAttribute("aria-label", `נבחרו ${count} מתוך 3`);
+      }
+
+      function toggleFace(index) {
+        if (revealed || !round[index]) return;
+
+        if (selected.has(index)) {
+          selected.delete(index);
+          tone(300);
+        } else if (selected.size < 3) {
+          selected.add(index);
+          tone(520 + selected.size * 50);
+        } else {
+          tone(150, .09);
+          return;
+        }
+
+        const card = grid.querySelector(`[data-index="${index}"]`);
+        const isSelected = selected.has(index);
+        card.setAttribute("aria-pressed", String(isSelected));
+        card.setAttribute("aria-label", `פרצוף ${index + 1}, ${isSelected ? "נבחר" : "לא נבחר"}`);
+        updateSelectionUI();
+        if (selected.size === 3) revealResult();
+      }
+
+      function revealResult(reason = "selection") {
+        if (revealed || (reason !== "timeout" && selected.size !== 3)) return;
+        revealed = true;
+        stopRoundTimer();
+
+        const correct = [...selected].filter(index => round[index].kind === "real").length;
+        const won = reason !== "timeout" && correct === 3;
+
+        [...grid.children].forEach((card, index) => {
+          card.classList.add("revealed", round[index].kind);
+          card.setAttribute("aria-label", `פרצוף ${index + 1}, ${round[index].kind === "real" ? "אמיתי" : "מזויף"}, ${selected.has(index) ? "נבחר" : "לא נבחר"}`);
+          card.disabled = true;
+        });
+
+        if (reason === "timeout") {
+          tone(150, .22);
+          resultKicker.textContent = "הסיבוב הסתיים";
+          resultTitle.textContent = "נגמר הזמן!";
+          resultSummary.textContent = "הזמן נגמר לפני שהספקתם לבחור שלושה פרצופים.";
+          resultSystem.textContent = "למזלכם, המערכת שלנו יודעת לזהות את הזיופים בשבילכם.";
+        } else if (won) {
+          tone(660, .12);
+          setTimeout(() => tone(880, .16), 110);
+          resultKicker.textContent = "3 מתוך 3";
+          resultTitle.textContent = "כל הכבוד!";
+          resultSummary.textContent = "זיהיתם נכון את כל שלושת הפרצופים האמיתיים.";
+          resultSystem.textContent = "נראה שהסתדרתם לבד, אבל למזלכם המערכת שלנו יודעת לזהות זיופים גם בשבילכם.";
+        } else {
+          tone(180, .18);
+          resultKicker.textContent = `${correct} מתוך 3`;
+          resultTitle.textContent = correct === 2 ? "כמעט!" : correct === 1 ? "לא הפעם" : "עבדו עליכם!";
+          resultSummary.textContent = correct === 2
+            ? "זיהיתם שני פרצופים אמיתיים, אבל מתחזה אחד הצליח להסתנן לבחירה שלכם."
+            : correct === 1
+              ? "זיהיתם פרצוף אמיתי אחד. הזיופים נעשים משכנעים יותר."
+              : "לא זיהיתם אף אחד מהפרצופים האמיתיים.";
+          resultSystem.textContent = correct === 2
+            ? "למזלכם, המערכת שלנו יודעת לזהות אותו בשבילכם."
+            : "למזלכם, המערכת שלנו יודעת לזהות את הזיופים בשבילכם.";
+        }
+
+        resultCard.className = `result-card ${won ? "win" : "lose"}`;
+        clearTimeout(resultOpenTimer);
+        resultOpenTimer = setTimeout(() => {
+          resultLayer.classList.add("open");
+          resultLayer.setAttribute("aria-hidden", "false");
+          againButton.focus();
+        }, 650);
+        startResultCountdown();
+      }
+
+      function startResultCountdown() {
+        clearInterval(countdownTimer);
+        clearTimeout(resultTimer);
+        let seconds = RESULT_SECONDS;
+        countdown.textContent = `חוזרים למסך הפתיחה בעוד ${seconds} ${hebrewSeconds(seconds)}`;
+        countdownTimer = setInterval(() => {
+          seconds -= 1;
+          countdown.textContent = `חוזרים למסך הפתיחה בעוד ${seconds} ${hebrewSeconds(seconds)}`;
+        }, 1000);
+        resultTimer = setTimeout(showIntro, RESULT_SECONDS * 1000);
+      }
+
+      function hebrewSeconds(value) {
+        return value === 1 ? "שנייה" : "שניות";
+      }
+
+      function updateTimerUI() {
+        timerValue.textContent = secondsRemaining;
+        timerLabel.textContent = hebrewSeconds(secondsRemaining);
+        timerPanel.setAttribute("aria-label", `נותרו ${secondsRemaining} ${hebrewSeconds(secondsRemaining)}`);
+        timerPanel.classList.toggle("urgent", secondsRemaining <= 5);
+      }
+
+      function stopRoundTimer() {
+        clearInterval(roundTimer);
+        roundTimer = null;
+      }
+
+      function startRoundTimer() {
+        stopRoundTimer();
+        secondsRemaining = ROUND_SECONDS;
+        updateTimerUI();
+        roundTimer = setInterval(() => {
+          secondsRemaining -= 1;
+          updateTimerUI();
+          if (secondsRemaining <= 0) revealResult("timeout");
+        }, 1000);
+      }
+
+      function showIntro() {
+        stopRoundTimer();
+        clearInterval(countdownTimer);
+        clearTimeout(resultTimer);
+        clearTimeout(resultOpenTimer);
+        resultLayer.classList.remove("open");
+        resultLayer.setAttribute("aria-hidden", "true");
+        introLayer.classList.add("open");
+        introLayer.setAttribute("aria-hidden", "false");
+        revealed = true;
+        requestAnimationFrame(() => introStartButton.focus());
+      }
+
+      function startRound() {
+        introStartButton.blur();
+        stopRoundTimer();
+        clearInterval(countdownTimer);
+        clearTimeout(resultTimer);
+        clearTimeout(resultOpenTimer);
+        resultLayer.classList.remove("open");
+        resultLayer.setAttribute("aria-hidden", "true");
+        introLayer.classList.remove("open");
+        introLayer.setAttribute("aria-hidden", "true");
+        selected = new Set();
+        revealed = false;
+        const fakeChoices = library.fakeGroups.length === 3
+          ? library.fakeGroups.flatMap(group => shuffled(group.faces).slice(0, 2))
+          : shuffled(library.fake).slice(0, REQUIRED_FAKE);
+        round = shuffled([
+          ...shuffled(library.real).slice(0, REQUIRED_REAL),
+          ...fakeChoices
+        ]);
+        renderRound();
+        updateSelectionUI();
+        startRoundTimer();
+      }
+
+      /*
+        OPTIONAL 3x3 CONTROLLER ADAPTER
+        --------------------------------
+        Works immediately if the Arduino behaves like a USB keyboard and sends
+        1-9 plus Enter. The Web Serial scaffold below also accepts newline-based
+        messages: 1..9, SUBMIT, RESET. Keep the baud rate at 9600 or change it
+        here to match the Arduino sketch.
+
+        External integrations can also call:
+          window.DeepfakeController.press(1)   // position 1..9
+          window.DeepfakeController.submit()
+          window.DeepfakeController.reset()
+      */
+      const controller = {
+        port: null,
+        reader: null,
+        async connect() {
+          if (!("serial" in navigator)) {
+            showToast("אפשר להשתמש במקשים 1-9. חיבור סריאלי דורש Chrome ושרת מקומי.");
+            return;
+          }
+          try {
+            this.port = await navigator.serial.requestPort();
+            await this.port.open({ baudRate: 9600 });
+            controllerButton.textContent = "Controller connected";
+            controllerButton.dataset.connected = "true";
+            showToast("החיבור הצליח.");
+            this.read();
+          } catch (error) {
+            if (error.name !== "NotFoundError") showToast("החיבור נכשל.");
+          }
+        },
+        async read() {
+          const decoder = new TextDecoderStream();
+          this.port.readable.pipeTo(decoder.writable).catch(() => {});
+          this.reader = decoder.readable.getReader();
+          let buffer = "";
+          try {
+            while (true) {
+              const { value, done } = await this.reader.read();
+              if (done) break;
+              buffer += value;
+              const messages = buffer.split(/\r?\n/);
+              buffer = messages.pop();
+              messages.forEach(message => this.handle(message.trim()));
+            }
+          } catch (_) {
+            controllerButton.textContent = "Controller ready";
+            controllerButton.dataset.connected = "false";
+          }
+        },
+        handle(message) {
+          if (/^[1-9]$/.test(message)) this.press(Number(message));
+          else if (message.toUpperCase() === "SUBMIT") this.submit();
+          else if (message.toUpperCase() === "RESET") this.reset();
+        },
+        press(position) {
+          if (introLayer.classList.contains("open")) {
+            startRound();
+            return;
+          }
+          if (revealed) {
+            showIntro();
+            return;
+          }
+          if (Number.isInteger(position) && position >= 1 && position <= 9) toggleFace(position - 1);
+        },
+        submit() {
+          if (introLayer.classList.contains("open")) startRound();
+          else if (revealed) showIntro();
+          else revealResult();
+        },
+        reset() { startRound(); }
+      };
+
+      window.DeepfakeController = controller;
+      controllerButton.addEventListener("click", () => controller.connect());
+      againButton.addEventListener("click", showIntro);
+      introStartButton.addEventListener("click", () => {
+        if (introLayer.classList.contains("open")) startRound();
+      });
+
+      window.addEventListener("keydown", event => {
+        if (introLayer.classList.contains("open")) {
+          const modifierKeys = ["Shift", "Control", "Alt", "Meta", "CapsLock", "NumLock", "ScrollLock"];
+          if (!event.repeat && !modifierKeys.includes(event.key)) {
+            event.preventDefault();
+            startRound();
+          }
+          return;
+        }
+
+        if (/^[1-9]$/.test(event.key)) {
+          event.preventDefault();
+          controller.press(Number(event.key));
+        } else if (event.key === "Enter") {
+          event.preventDefault();
+          controller.submit();
+        } else if (event.key.toLowerCase() === "r" || event.key === "Escape") {
+          event.preventDefault();
+          controller.reset();
+        } else if (event.key.toLowerCase() === "c") {
+          controller.connect();
+        }
+      });
+
+      showIntro();
+    })();
+  </script>
+</body>
+</html>
