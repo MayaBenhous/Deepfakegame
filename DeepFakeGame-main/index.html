@@ -100,6 +100,7 @@
     @keyframes timerPulse { to { transform: scale(1.04); } }
 
     .game-area {
+      grid-row: 3;
       min-width: 0;
       min-height: 0;
       display: grid;
@@ -285,7 +286,7 @@
 
     .overlay-layer.open { opacity: 1; pointer-events: auto; }
 
-    .result-layer { display: none; min-width: 0; }
+    .result-layer { display: none; grid-row: 2; min-width: 0; }
     .result-layer.open { display: block; }
 
     .result-card {
@@ -371,8 +372,6 @@
       outline: 3px solid var(--blue);
       outline-offset: 4px;
     }
-
-    .countdown { margin: 9px 0 0; color: var(--muted); font-size: clamp(12px, 1vw, 15px); font-weight: 800; }
 
     .intro-layer { z-index: 25; background: rgba(17,17,15,.68); }
 
@@ -466,13 +465,81 @@
       .result-summary, .result-system { font-size: clamp(13px, 3vw, 16px); }
       .result-system { padding: 5px 8px; }
       .again-button { min-width: 170px; min-height: 44px; padding: 7px 16px; }
-      .countdown { margin-top: 6px; font-size: 11px; }
     }
 
     @media (max-height: 800px) and (min-width: 761px) {
       .app { padding-top: 10px; padding-bottom: 10px; gap: 8px; }
       h1 { font-size: clamp(34px, 4.4vw, 58px); }
       .timer-panel, .selection-counter { min-height: 56px; }
+    }
+
+    @media (orientation: portrait) and (min-height: 900px) {
+      .app {
+        padding-top: max(clamp(34px, 2.6vh, 54px), env(safe-area-inset-top));
+        padding-right: max(clamp(22px, 2.6vw, 38px), env(safe-area-inset-right));
+        padding-bottom: max(clamp(24px, 2vh, 42px), env(safe-area-inset-bottom));
+        padding-left: max(clamp(22px, 2.6vw, 38px), env(safe-area-inset-left));
+      }
+
+      .result-card {
+        min-height: clamp(500px, 33vh, 650px);
+        padding: clamp(14px, 1.8vw, 26px);
+        gap: clamp(24px, 2.8vw, 38px);
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+          "heading"
+          "copy"
+          "actions";
+        align-content: center;
+        justify-items: center;
+      }
+
+      .result-heading,
+      .result-actions { width: 100%; }
+      .result-heading { display: grid; gap: clamp(8px, 1vw, 14px); }
+      .result-copy { width: 100%; }
+      .result-copy { gap: clamp(16px, 2vw, 28px); }
+      .result-title { font-size: clamp(68px, 9vw, 104px); }
+      .result-kicker {
+        margin: 0;
+        font-size: clamp(30px, 3.6vw, 44px);
+      }
+      .result-summary,
+      .result-system { font-size: clamp(30px, 3.6vw, 44px); }
+      .result-system { padding: clamp(14px, 1.8vw, 22px) clamp(18px, 2.3vw, 30px); }
+      .again-button {
+        min-width: clamp(300px, 34vw, 390px);
+        min-height: clamp(76px, 8vw, 94px);
+        padding: 14px 30px;
+        font-size: clamp(32px, 3.8vw, 46px);
+      }
+
+      .intro-card {
+        width: calc(100vw - 56px);
+        max-width: none;
+        min-height: clamp(500px, 33vh, 650px);
+        padding: clamp(14px, 1.8vw, 26px);
+        display: grid;
+        align-content: center;
+        justify-items: center;
+        gap: clamp(24px, 2.8vw, 38px);
+      }
+
+      .intro-title { font-size: clamp(68px, 9vw, 104px); }
+      .intro-copy {
+        width: 100%;
+        max-width: none;
+        margin: 0 auto;
+        font-size: clamp(30px, 3.6vw, 44px);
+        line-height: 1.45;
+      }
+
+      .intro-hint {
+        min-width: clamp(300px, 34vw, 390px);
+        min-height: clamp(76px, 8vw, 94px);
+        padding: 14px 30px;
+        font-size: clamp(32px, 3.8vw, 46px);
+      }
     }
 
     @media (max-height: 620px) {
@@ -495,7 +562,6 @@
       .result-summary, .result-system { font-size: clamp(12px, 2.7vh, 16px); line-height: 1.15; }
       .result-system { padding: 4px 8px; }
       .again-button { min-height: 40px; padding: 5px 14px; font-size: 13px; }
-      .countdown { margin-top: 4px; font-size: 10px; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -526,7 +592,6 @@
         </div>
         <div class="result-actions">
           <button class="again-button" id="againButton" type="button">נסו שוב</button>
-          <p class="countdown" id="countdown"></p>
         </div>
       </div>
     </section>
@@ -575,15 +640,12 @@
       const resultTitle = document.getElementById("resultTitle");
       const resultSummary = document.getElementById("resultSummary");
       const resultSystem = document.getElementById("resultSystem");
-      const countdown = document.getElementById("countdown");
       const toast = document.getElementById("toast");
 
       let round = [];
       let selected = new Set();
       let revealed = false;
-      let resultTimer = null;
       let resultOpenTimer = null;
-      let countdownTimer = null;
       let roundTimer = null;
       let secondsRemaining = ROUND_SECONDS;
       let toastTimer = null;
@@ -808,20 +870,19 @@
           resultLayer.classList.add("open");
           resultLayer.setAttribute("aria-hidden", "false");
           againButton.focus();
+          startResultCountdown();
         }, 650);
-        startResultCountdown();
       }
 
       function startResultCountdown() {
-        clearInterval(countdownTimer);
-        clearTimeout(resultTimer);
-        let seconds = RESULT_SECONDS;
-        countdown.textContent = `חוזרים למסך הפתיחה בעוד ${seconds} ${hebrewSeconds(seconds)}`;
-        countdownTimer = setInterval(() => {
-          seconds -= 1;
-          countdown.textContent = `חוזרים למסך הפתיחה בעוד ${seconds} ${hebrewSeconds(seconds)}`;
+        stopRoundTimer();
+        secondsRemaining = RESULT_SECONDS;
+        updateTimerUI();
+        roundTimer = setInterval(() => {
+          secondsRemaining -= 1;
+          updateTimerUI();
+          if (secondsRemaining <= 0) showIntro();
         }, 1000);
-        resultTimer = setTimeout(showIntro, RESULT_SECONDS * 1000);
       }
 
       function hebrewSeconds(value) {
@@ -853,29 +914,18 @@
 
       function showIntro() {
         stopRoundTimer();
-        clearInterval(countdownTimer);
-        clearTimeout(resultTimer);
         clearTimeout(resultOpenTimer);
         resultLayer.classList.remove("open");
         resultLayer.setAttribute("aria-hidden", "true");
+        prepareRound();
         introLayer.classList.add("open");
         introLayer.setAttribute("aria-hidden", "false");
         revealed = true;
         requestAnimationFrame(() => introStartButton.focus());
       }
 
-      function startRound() {
-        introStartButton.blur();
-        stopRoundTimer();
-        clearInterval(countdownTimer);
-        clearTimeout(resultTimer);
-        clearTimeout(resultOpenTimer);
-        resultLayer.classList.remove("open");
-        resultLayer.setAttribute("aria-hidden", "true");
-        introLayer.classList.remove("open");
-        introLayer.setAttribute("aria-hidden", "true");
+      function prepareRound() {
         selected = new Set();
-        revealed = false;
         const fakeChoices = library.fakeGroups.length === 3
           ? library.fakeGroups.flatMap(group => shuffled(group.faces).slice(0, 2))
           : shuffled(library.fake).slice(0, REQUIRED_FAKE);
@@ -884,6 +934,21 @@
           ...fakeChoices
         ]);
         renderRound();
+        updateSelectionUI();
+        secondsRemaining = ROUND_SECONDS;
+        updateTimerUI();
+      }
+
+      function startRound() {
+        introStartButton.blur();
+        stopRoundTimer();
+        clearTimeout(resultOpenTimer);
+        resultLayer.classList.remove("open");
+        resultLayer.setAttribute("aria-hidden", "true");
+        introLayer.classList.remove("open");
+        introLayer.setAttribute("aria-hidden", "true");
+        selected = new Set();
+        revealed = false;
         updateSelectionUI();
         startRoundTimer();
       }
