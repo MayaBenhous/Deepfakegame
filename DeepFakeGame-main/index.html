@@ -757,10 +757,21 @@
           image.src = face.src;
           image.alt = `פרצוף מספר ${index + 1}`;
           image.draggable = false;
+          image.loading = "eager";
+          let loadAttempts = 0;
           image.addEventListener("error", () => {
+            loadAttempts += 1;
+            if (loadAttempts <= 2) {
+              const separator = face.src.includes("?") ? "&" : "?";
+              setTimeout(() => {
+                image.src = `${face.src}${separator}retry=${loadAttempts}`;
+              }, loadAttempts * 150);
+              return;
+            }
+
             frame.replaceWith(createDemoPortrait(index));
             showToast("לא ניתן לטעון את אחת התמונות.");
-          }, { once: true });
+          });
           frame.append(image);
           return frame;
         }
