@@ -6,6 +6,16 @@ The interface is in Hebrew. Each round lasts 30 seconds, the third face selectio
 
 **🎮 [Play the Game Online (GitLab Pages)](https://lichvladimir.gitlab.io/DeepFakeGame)**
 
+## Run on a Windows exhibition PC
+
+1. Copy the entire `DeepFakeGame-main` folder to the PC.
+2. Connect the Arduino by USB.
+3. Make sure Python and the Arduino Serial Monitor are closed.
+4. Double-click `START_GAME.bat`.
+5. Keep the launcher window open while the game is running.
+
+The launcher uses Windows PowerShell, detects the USB serial device, opens it at 9600 baud, starts a local server, and opens Chrome (or Edge as a fallback). It does not require Python, browser USB permission, or downloaded packages. For a hosted deployment, upload the folder contents to any HTTPS static host; the launcher files are ignored by the website and the browser's Web Serial support is used as a fallback.
+
 
 ## Add your images
 
@@ -20,7 +30,9 @@ Use at least 3 real images and at least 2 images in each of 3 attack folders. Ev
 
 - Mouse or touch: tap three faces. The third choice checks the answer automatically.
 - Keyboard/controller: keys `1` through `9` match the physical 3×3 positions. After a win or loss, pressing any of the nine face buttons starts a fresh round. `Enter` also starts the next round; `R` or `Escape` resets.
-- Optional serial scaffold: click **Controller ready** or press `C`. A serial controller can send `1`-`9`, `SUBMIT`, or `RESET`, each followed by a newline, at 9600 baud. Web Serial requires Chrome or Edge on `localhost` or HTTPS.
-- The simplest Arduino option is a board that can act as a USB keyboard. Have its nine buttons send keys `1`-`9`; this works without serial setup.
+- Arduino serial controller on Windows: close Python and the Arduino Serial Monitor, then start the game with `START_GAME.bat`. The launcher detects and opens the USB COM port automatically. No controller controls or USB chooser are shown in the public game UI.
+- The controller sends `1`-`9` followed by a newline at 9600 baud. The game sends `Y` after a valid button press, then `G` or `R` one second after the third selection.
+- The USB port can have a different `COM` number on another PC; the browser's port chooser handles this automatically.
+- A USB-keyboard Arduino can still send keys `1`-`9` without using the serial connection, but the game window must have focus and it will not receive the `Y`, `G`, or `R` light commands.
 
 The game resets automatically after results or after one minute of inactivity, making it suitable for an unattended project stall.

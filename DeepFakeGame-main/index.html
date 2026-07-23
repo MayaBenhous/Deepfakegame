@@ -113,7 +113,6 @@
       height: 100%;
       min-width: 0;
       min-height: 0;
-      direction: ltr;
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       grid-template-rows: repeat(3, minmax(0, 1fr));
@@ -122,7 +121,6 @@
 
     .face-card {
       position: relative;
-      direction: rtl;
       width: 100%;
       height: 100%;
       min-width: 0;
@@ -881,6 +879,7 @@
         }
 
         resultCard.className = `result-card ${won ? "win" : "lose"}`;
+        controller.showResult(won);
         clearTimeout(resultOpenTimer);
         resultOpenTimer = setTimeout(() => {
           resultLayer.classList.add("open");
@@ -985,21 +984,115 @@
       const controller = {
         port: null,
         reader: null,
-        async connect() {
+        writer: null,
+        resultSignalTimer: null,
+        bridgeAvailable: false,
+        bridgeConnected: false,
+        bridgePollTimer: null,
+        bridgePollBusy: false,
+        async connectBridge() {
+          try {
+            const response = await fetch("/controller/status", { cache: "no-store" });
+            if (!response.ok) return false;
+            const status = await response.json();
+            this.bridgeAvailable = true;
+            this.bridgeConnected = Boolean(status.connected);
+            if (this.bridgeConnected) this.startBridgePolling();
+            return this.bridgeConnected;
+          } catch (_) {
+            this.bridgeAvailable = false;
+            this.bridgeConnected = false;
+            return false;
+          }
+        },
+        startBridgePolling() {
+          if (this.bridgePollTimer) return;
+          this.bridgePollTimer = setInterval(() => void this.pollBridge(), 250);
+        },
+        async pollBridge() {
+          if (this.bridgePollBusy || !this.bridgeConnected) return;
+          this.bridgePollBusy = true;
+          try {
+            const response = await fetch("/controller/poll", { cache: "no-store" });
+            if (!response.ok) throw new Error("Controller bridge unavailable");
+            const payload = await response.json();
+            this.bridgeConnected = Boolean(payload.connected);
+            (payload.messages || []).forEach(message => this.handle(String(message)));
+          } catch (_) {
+            this.bridgeConnected = false;
+            clearInterval(this.bridgePollTimer);
+            this.bridgePollTimer = null;
+          } finally {
+            this.bridgePollBusy = false;
+          }
+        },
+        async connect(requestPermission = false) {
+          if (await this.connectBridge()) return true;
+          if (this.bridgeAvailable) {
+            if (requestPermission) {
+              showToast("הארדואינו לא זוהה. חברו אותו מחדש והפעילו שוב את START_GAME.");
+            }
+            return false;
+          }
+
           if (!("serial" in navigator)) {
-            showToast("אפשר להשתמש במקשים 1-9. חיבור סריאלי דורש Chrome ושרת מקומי.");
+            if (requestPermission) {
+              showToast("חיבור USB דורש Chrome או Edge ושרת מקומי.");
+            }
+            return false;
+          }
+          if (this.port) return true;
+
+          controllerButton.disabled = true;
+          try {
+            const approvedPorts = await navigator.serial.getPorts();
+            this.port = approvedPorts[0] || null;
+            if (!this.port && requestPermission) {
+              this.port = await navigator.serial.requestPort();
+            }
+            if (!this.port) return false;
+
+            await this.port.open({ baudRate: 9600 });
+            this.writer = this.port.writable.getWriter();
+            controllerButton.textContent = "הבקר מחובר";
+            controllerButton.dataset.connected = "true";
+            if (requestPermission) showToast("הבקר מחובר.");
+            void this.read();
+            return true;
+          } catch (error) {
+            this.port = null;
+            if (requestPermission && error.name !== "NotFoundError") {
+              showToast("החיבור נכשל. סגרו את Python ואת ה-Serial Monitor ונסו שוב.");
+            }
+            return false;
+          } finally {
+            controllerButton.disabled = false;
+          }
+        },
+        async signal(value) {
+          if (this.bridgeConnected) {
+            try {
+              await fetch(`/controller/signal?value=${encodeURIComponent(value)}`, {
+                cache: "no-store"
+              });
+            } catch (_) {
+              this.bridgeConnected = false;
+            }
             return;
           }
+
+          if (!this.writer) return;
           try {
-            this.port = await navigator.serial.requestPort();
-            await this.port.open({ baudRate: 9600 });
-            controllerButton.textContent = "Controller connected";
-            controllerButton.dataset.connected = "true";
-            showToast("החיבור הצליח.");
-            this.read();
-          } catch (error) {
-            if (error.name !== "NotFoundError") showToast("החיבור נכשל.");
+            await this.writer.write(new TextEncoder().encode(value));
+          } catch (_) {
+            showToast("החיבור לבקר נותק.");
           }
+        },
+        showResult(won) {
+          clearTimeout(this.resultSignalTimer);
+          this.resultSignalTimer = setTimeout(() => {
+            void this.signal(won ? "G" : "R");
+          }, 1000);
         },
         async read() {
           const decoder = new TextDecoderStream();
@@ -1016,12 +1109,21 @@
               messages.forEach(message => this.handle(message.trim()));
             }
           } catch (_) {
-            controllerButton.textContent = "Controller ready";
+            controllerButton.textContent = "חיבור לבקר";
             controllerButton.dataset.connected = "false";
+          } finally {
+            try { this.reader?.releaseLock(); } catch (_) {}
+            try { this.writer?.releaseLock(); } catch (_) {}
+            this.reader = null;
+            this.writer = null;
+            this.port = null;
           }
         },
         handle(message) {
-          if (/^[1-9]$/.test(message)) this.press(Number(message));
+          if (/^[1-9]$/.test(message)) {
+            void this.signal("Y");
+            this.press(Number(message));
+          }
           else if (message.toUpperCase() === "SUBMIT") this.submit();
           else if (message.toUpperCase() === "RESET") this.reset();
         },
@@ -1045,14 +1147,21 @@
       };
 
       window.DeepfakeController = controller;
-      controllerButton.addEventListener("click", () => controller.connect());
+      controllerButton.addEventListener("click", () => controller.connect(true));
       againButton.addEventListener("click", showIntro);
-      introStartButton.addEventListener("click", () => {
+      introStartButton.addEventListener("click", async () => {
+        if (!introLayer.classList.contains("open")) return;
+        await controller.connect(true);
         if (introLayer.classList.contains("open")) startRound();
       });
 
       window.addEventListener("keydown", event => {
         if (introLayer.classList.contains("open")) {
+          if (event.key.toLowerCase() === "c") {
+            event.preventDefault();
+            void controller.connect(true);
+            return;
+          }
           const modifierKeys = ["Shift", "Control", "Alt", "Meta", "CapsLock", "NumLock", "ScrollLock"];
           if (!event.repeat && !modifierKeys.includes(event.key)) {
             event.preventDefault();
@@ -1071,10 +1180,11 @@
           event.preventDefault();
           controller.reset();
         } else if (event.key.toLowerCase() === "c") {
-          controller.connect();
+          void controller.connect(true);
         }
       });
 
+      void controller.connect(false);
       showIntro();
     })();
   </script>
